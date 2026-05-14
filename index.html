@@ -279,7 +279,7 @@ async function modifyApp() {
 // ── Gemini API ────────────────────────────────────────────────────
 async function callGemini(prompt) {
   var key = getKey();
-  var models = ['gemini-2.5-pro-preview-05-06', 'gemini-2.5-flash-preview-04-17', 'gemini-2.0-flash'];
+  var models = ['gemini-2.5-pro-preview-05-06', 'gemini-2.5-flash-preview-04-17', 'gemini-1.5-pro-latest'];
   var lastError = null;
 
   for (var i = 0; i < models.length; i++) {

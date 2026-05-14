@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoCode AI Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .preview-frame { width: 100%; height: 100%; border: none; }
+    .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .tab-active { background: white !important; color: #4f46e5 !important; }
+    .code-block { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col">
+
+  <!-- API Key Setup Modal -->
+  <div id="apiModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-900 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl p-8">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <span class="text-2xl">🤖</span>
+        </div>
+        <h2 class="text-xl font-bold">NoCode AI Builder</h2>
+        <p class="text-gray-400 text-sm mt-2">Entre ta clé API Google Gemini pour commencer</p>
+      </div>
+      <input 
+        id="apiKeyInput"
+        type="password"
+        placeholder="AIzaSy..."
+        class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none mb-3"
+      />
+      <button onclick="saveApiKey()" class="w-full gradient-bg py-3 rounded-xl font-semibold hover:opacity-90 transition-all">
+        Démarrer ✨
+      </button>
+      <p class="text-xs text-gray-600 text-center mt-4">Ta clé est stockée localement, jamais envoyée ailleurs</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="gradient-bg px-6 py-4 flex items-center justify-between shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+        <span class="text-purple-600 font-bold text-sm">AI</span>
+      </div>
+      <span class="font-bold text-xl">NoCode AI Builder</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="newProject()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-all">
+        + Nouveau
+      </button>
+      <button onclick="changeApiKey()" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition-all" title="Changer la clé API">
+        🔑
+      </button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 64px)">
+
+    <!-- Left Panel -->
+    <div class="w-80 bg-gray-900 flex flex-col border-r border-gray-800 overflow-y-auto">
+
+      <div class="p-4 border-b border-gray-800">
+        <label class="text-xs text-gray-400 font-medium mb-2 block">TYPE DE PROJET</label>
+        <select id="projectType" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none">
+          <option value="landing page">🚀 Landing Page</option>
+          <option value="portfolio">💼 Portfolio</option>
+          <option value="application web">⚡ Application Web</option>
+          <option value="blog">📝 Blog</option>
+          <option value="boutique en ligne">🛍️ E-commerce</option>
+          <option value="dashboard analytics">📊 Dashboard</option>
+          <option value="site web">✨ Autre</option>
+        </select>
+      </div>
+
+      <div class="p-4 border-b border-gray-800">
+        <label class="text-xs text-gray-400 font-medium mb-2 block">DÉCRIS TON PROJET</label>
+        <textarea 
+          id="mainPrompt"
+          placeholder="Ex: Une landing page moderne pour une startup de fintech avec un hero accrocheur, des features, des témoignages et un CTA..."
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-3 text-sm text-white placeholder-gray-500 resize-none focus:border-purple-500 focus:outline-none transition-all"
+          rows="6"
+        ></textarea>
+
+        <div class="mt-3">
+          <p class="text-xs text-gray-500 mb-2">Suggestions :</p>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="setPrompt('landing page', 'Landing page moderne pour une app mobile de fitness avec hero animé, liste de features et bouton CTA')" 
+              class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full px-2.5 py-1 transition-all">💪 Fitness</button>
+            <button onclick="setPrompt('portfolio', 'Portfolio élégant pour un designer UX/UI avec ses projets, ses skills et un formulaire de contact')"
+              class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full px-2.5 py-1 transition-all">🎨 Portfolio</button>
+            <button onclick="setPrompt('boutique en ligne', 'Boutique de cosmétiques naturels avec grille de produits, panier et page de checkout')"
+              class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full px-2.5 py-1 transition-all">🌿 Boutique</button>
+            <button onclick="setPrompt('dashboard analytics', 'Dashboard SaaS avec KPIs, graphiques en barres, tableau de données et sidebar navigation')"
+              class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full px-2.5 py-1 transition-all">📊 Dashboard</button>
+            <button onclick="setPrompt('application web', 'App de gestion de tâches style Notion avec sidebar, liste de tâches, tags et priorités')"
+              class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-full px-2.5 py-1 transition-all">✅ Todo App</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-b border-gray-800">
+        <button 
+          id="generateBtn"
+          onclick="generateCode()"
+          class="w-full gradient-bg hover:opacity-90 py-3 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-2 shadow-lg"
+        >
+          <span id="generateBtnText">✨ Générer avec Gemini</span>
+        </button>
+      </div>
+
+      <!-- Modify -->
+      <div id="modifySection" class="hidden p-4 border-b border-gray-800">
+        <label class="text-xs text-gray-400 font-medium mb-2 block">✏️ MODIFIER</label>
+        <textarea 
+          id="modifyPrompt"
+          placeholder="Ex: Change la couleur principale en bleu, ajoute une FAQ, rends le hero plus grand..."
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 resize-none focus:border-purple-500 focus:outline-none"
+          rows="3"
+        ></textarea>
+        <button onclick="modifyCode()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg text-sm font-medium transition-all">
+          Appliquer
+        </button>
+      </div>
+
+      <!-- Status -->
+      <div id="statusPanel" class="hidden px-4 py-3">
+        <p id="statusMsg" class="text-xs text-gray-400"></p>
+      </div>
+
+      <!-- Download -->
+      <div id="downloadSection" class="hidden p-4">
+        <button onclick="downloadCode()" class="w-full bg-green-600 hover:bg-green-700 py-2.5 rounded-xl text-sm font-semibold transition-all">
+          ⬇️ Télécharger le HTML
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Tabs -->
+      <div class="bg-gray-900 border-b border-gray-800 flex items-center px-4 py-2 gap-1">
+        <button onclick="switchTab('preview')" id="tab-preview" class="tab-active px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-gray-800 text-gray-400">
+          👁️ Aperçu
+        </button>
+        <button onclick="switchTab('code')" id="tab-code" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-gray-800 text-gray-400">
+          💻 Code
+        </button>
+        <div class="ml-auto flex gap-1">
+          <button onclick="setDevice('full')" id="dev-full" class="text-xs px-3 py-1 rounded-lg bg-gray-700 text-white transition-all">🖥️ Full</button>
+          <button onclick="setDevice('tablet')" id="dev-tablet" class="text-xs px-3 py-1 rounded-lg bg-gray-800 text-gray-500 transition-all">📱 768px</button>
+          <button onclick="setDevice('mobile')" id="dev-mobile" class="text-xs px-3 py-1 rounded-lg bg-gray-800 text-gray-500 transition-all">📲 375px</button>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="panel-preview" class="flex-1 flex items-center justify-center bg-gray-800 overflow-hidden">
+        <div id="emptyState" class="text-center p-10">
+          <div class="text-7xl mb-5">🚀</div>
+          <h2 class="text-2xl font-bold mb-3">Construis quelque chose d'incroyable</h2>
+          <p class="text-gray-400 text-sm max-w-sm mx-auto">Décris ton projet à gauche et laisse Gemini générer un site complet en quelques secondes.</p>
+        </div>
+        <div id="loadingState" class="hidden text-center p-10">
+          <div class="loader mx-auto mb-6"></div>
+          <h2 class="text-xl font-bold mb-2">Gemini génère ton projet...</h2>
+          <p id="loadingTip" class="text-gray-400 text-sm">Création du design...</p>
+        </div>
+        <div id="previewWrapper" class="hidden w-full h-full flex items-center justify-center p-3 transition-all">
+          <div id="deviceBox" class="bg-white rounded-xl overflow-hidden shadow-2xl w-full h-full transition-all duration-300">
+            <iframe id="previewFrame" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div id="panel-code" class="hidden flex-1 overflow-auto bg-gray-950 p-5">
+        <pre id="codeDisplay" class="code-block text-green-400 whitespace-pre-wrap break-all"></pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const TIPS = ["Création du design...", "Choix des couleurs...", "Génération des composants...", "Finalisation du HTML...", "Optimisation responsive..."];
+  let tipTimer = null;
+  let currentCode = '';
+
+  // ── API Key ──────────────────────────────────────
+  function getKey() { return localStorage.getItem('gemini_key') || ''; }
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key.startsWith('AIza')) { alert('Clé invalide (doit commencer par AIza...)'); return; }
+    localStorage.setItem('gemini_key', key);
+    document.getElementById('apiModal').classList.add('hidden');
+  }
+
+  function changeApiKey() {
+    localStorage.removeItem('gemini_key');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiModal').classList.remove('hidden');
+  }
+
+  window.onload = () => {
+    if (getKey()) document.getElementById('apiModal').classList.add('hidden');
+    // init tab style
+    document.getElementById('tab-preview').classList.add('tab-active');
+  };
+
+  // ── Quick prompts ─────────────────────────────────
+  function setPrompt(type, prompt) {
+    document.getElementById('projectType').value = type;
+    document.getElementById('mainPrompt').value = prompt;
+  }
+
+  // ── Generate ──────────────────────────────────────
+  async function generateCode() {
+    const prompt = document.getElementById('mainPrompt').value.trim();
+    const type = document.getElementById('projectType').value;
+    if (!prompt) { alert('Décris ton projet !'); return; }
+    if (!getKey()) { changeApiKey(); return; }
+
+    setLoading(true);
+    try {
+      const code = await callGemini(`Crée un(e) ${type}: ${prompt}`);
+      currentCode = code;
+      renderCode(code);
+      document.getElementById('modifySection').classList.remove('hidden');
+      document.getElementById('downloadSection').classList.remove('hidden');
+      showStatus('✅ Généré avec succès !');
+    } catch(e) {
+      showStatus('❌ ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function modifyCode() {
+    const mod = document.getElementById('modifyPrompt').value.trim();
+    if (!mod || !currentCode) return;
+    setLoading(true);
+    try {
+      const code = await callGemini(
+        `Voici le code HTML existant:\n\`\`\`html\n${currentCode}\n\`\`\`\n\nModification demandée: ${mod}`
+      );
+      currentCode = code;
+      renderCode(code);
+      document.getElementById('modifyPrompt').value = '';
+      showStatus('✅ Modification appliquée !');
+    } catch(e) {
+      showStatus('❌ ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function callGemini(userMessage) {
+    const key = getKey();
+    const system = `Tu es un expert en développement web. Tu génères du code HTML/CSS/JS complet et moderne.
+RÈGLES:
+- Retourne UNIQUEMENT le code HTML complet (<!DOCTYPE html>...</html>), rien d'autre
+- Design moderne, beau et professionnel
+- Utilise Tailwind CSS via CDN
+- Gradients, animations et effets visuels attractifs
+- Code 100% fonctionnel et autonome dans un seul fichier
+- Données d'exemple réalistes
+- Responsive mobile-first
+- JavaScript vanilla moderne pour l'interactivité`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
+
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return raw.replace(/^```html\n?/i, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  function renderCode(code) {
+    document.getElementById('previewFrame').srcdoc = code;
+    document.getElementById('codeDisplay').textContent = code;
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('previewWrapper').classList.remove('hidden');
+    document.getElementById('previewWrapper').classList.add('flex');
+  }
+
+  // ── UI helpers ────────────────────────────────────
+  function setLoading(on) {
+    const btn = document.getElementById('generateBtn');
+    const txt = document.getElementById('generateBtnText');
+    if (on) {
+      btn.disabled = true; btn.classList.add('opacity-60');
+      txt.innerHTML = '<svg class="animate-spin w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Génération...';
+      if (!currentCode) {
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('loadingState').classList.remove('hidden');
+      }
+      let i = 0;
+      tipTimer = setInterval(() => {
+        document.getElementById('loadingTip').textContent = TIPS[i++ % TIPS.length];
+      }, 1500);
+    } else {
+      btn.disabled = false; btn.classList.remove('opacity-60');
+      txt.textContent = '✨ Générer avec Gemini';
+      document.getElementById('loadingState').classList.add('hidden');
+      clearInterval(tipTimer);
+    }
+  }
+
+  function showStatus(msg) {
+    const p = document.getElementById('statusPanel');
+    document.getElementById('statusMsg').textContent = msg;
+    p.classList.remove('hidden');
+    setTimeout(() => p.classList.add('hidden'), 4000);
+  }
+
+  function switchTab(tab) {
+    ['preview','code'].forEach(t => {
+      document.getElementById(`panel-${t}`).classList.add('hidden');
+      document.getElementById(`tab-${t}`).classList.remove('tab-active');
+    });
+    document.getElementById(`panel-${tab}`).classList.remove('hidden');
+    document.getElementById(`tab-${tab}`).classList.add('tab-active');
+  }
+
+  function setDevice(d) {
+    const box = document.getElementById('deviceBox');
+    ['full','tablet','mobile'].forEach(x => {
+      document.getElementById(`dev-${x}`).className = `text-xs px-3 py-1 rounded-lg bg-gray-800 text-gray-500 transition-all`;
+    });
+    document.getElementById(`dev-${d}`).className = `text-xs px-3 py-1 rounded-lg bg-gray-700 text-white transition-all`;
+    if (d === 'full') { box.style.maxWidth = '100%'; box.style.maxHeight = '100%'; }
+    else if (d === 'tablet') { box.style.maxWidth = '768px'; box.style.maxHeight = '1024px'; }
+    else { box.style.maxWidth = '375px'; box.style.maxHeight = '812px'; }
+  }
+
+  function newProject() {
+    currentCode = '';
+    document.getElementById('mainPrompt').value = '';
+    document.getElementById('modifyPrompt').value = '';
+    document.getElementById('modifySection').classList.add('hidden');
+    document.getElementById('downloadSection').classList.add('hidden');
+    document.getElementById('previewWrapper').classList.add('hidden');
+    document.getElementById('previewWrapper').classList.remove('flex');
+    document.getElementById('emptyState').classList.remove('hidden');
+    document.getElementById('codeDisplay').textContent = '';
+    switchTab('preview');
+  }
+
+  function downloadCode() {
+    if (!currentCode) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([currentCode], {type: 'text/html'}));
+    a.download = 'mon-projet.html';
+    a.click();
+  }
+</script>
+</body>
+</html>

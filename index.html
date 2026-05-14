@@ -306,7 +306,16 @@ STYLE: Design moderne avec gradients, ombres, transitions CSS smooth. Pas de des
   }
 
   function renderCode(code) {
-    document.getElementById('previewFrame').srcdoc = code;
+    // Utilise une blob URL pour éviter les restrictions de srcdoc
+    const blob = new Blob([code], {type: 'text/html'});
+    const blobUrl = URL.createObjectURL(blob);
+    const frame = document.getElementById('previewFrame');
+    // Libère l'ancienne blob URL si elle existe
+    if (frame._blobUrl) URL.revokeObjectURL(frame._blobUrl);
+    frame._blobUrl = blobUrl;
+    frame.src = blobUrl;
+    // Supprime le sandbox pour que tout fonctionne
+    frame.removeAttribute('sandbox');
     document.getElementById('codeDisplay').textContent = code;
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('loadingState').classList.add('hidden');
